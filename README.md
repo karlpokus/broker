@@ -29,6 +29,7 @@ $ go test ./pkg/broker/...
 - [ ] less messy msg protocol
 - [ ] handle empty msg text
 - [ ] concurrent dispatch
+- [ ] avoid sub dupes
 
 # license
 MIT
