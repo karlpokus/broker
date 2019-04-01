@@ -9,28 +9,28 @@ import (
 	"github.com/karlpokus/broker/pkg/broker"
 )
 
-var b = broker.New()
+var bkr = broker.New()
 
 func handler(conn net.Conn) {
 	defer conn.Close()
 
 	for {
-		conn.SetDeadline(time.Now().Add(2 * time.Minute))
+		conn.SetDeadline(time.Now().Add(30 * time.Second))
 		var buf [128]byte
 		n, err := conn.Read(buf[:])
 		if err, ok := err.(net.Error); ok && err.Timeout() {
-			fmt.Println("client timed out") // TODO: remove client
+			bkr.RemoveClient(conn)
 			return
 		}
 		if err == io.EOF {
-			fmt.Println("client disconnected") // TODO: remove client
+			bkr.RemoveClient(conn)
 			return
 		}
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		err = b.Parse(buf[:n], conn)
+		err = bkr.Parse(buf[:n], conn)
 		if err != nil {
 			fmt.Fprintf(conn, "%s\n", err.Error())
 			continue

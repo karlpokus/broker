@@ -7,7 +7,7 @@ import (
 
 type queue struct {
 	msgs []string
-	subs []net.Conn
+	subs map[net.Addr]net.Conn
 }
 
 type storage map[string]queue
@@ -40,6 +40,7 @@ func (b *broker) pub(m *msg) {
 		if !ok {
 			s[m.queue] = queue{
 				msgs: []string{m.text},
+				subs: make(map[net.Addr]net.Conn),
 			}
 			return
 		}
@@ -54,12 +55,11 @@ func (b *broker) sub(m *msg, conn net.Conn) {
 	b.ops <- func(s storage) {
 		q, ok := s[m.queue]
 		if !ok {
-			s[m.queue] = queue{
-				subs: []net.Conn{conn},
+			q = queue{
+				subs: make(map[net.Addr]net.Conn),
 			}
-			return
 		}
-		q.subs = append(q.subs, conn)
+		q.subs[conn.RemoteAddr()] = conn
 		s[m.queue] = q
 	}
 	b.ops <- debug
@@ -76,9 +76,22 @@ func dispatch(q string) opFunc {
 	}
 }
 
+func (b *broker) RemoveClient(conn net.Conn) {
+	b.ops <- func(s storage) {
+		for k, q := range s {
+			_, ok := q.subs[conn.RemoteAddr()]
+			if ok {
+				delete(q.subs, conn.RemoteAddr())
+				s[k] = q // needed?
+			}
+		}
+	}
+	b.ops <- debug
+}
+
 func debug(s storage) {
 	for k, v := range s {
-		fmt.Printf("debug %s: %d msgs, %d subs\n", k, len(v.msgs), len(v.subs))
+		fmt.Printf("%s: %d msgs, %d subs\n", k, len(v.msgs), len(v.subs))
 	}
 }
 
