@@ -30,6 +30,8 @@ $ go test ./pkg/broker/...
 - [ ] handle empty msg text
 - [ ] concurrent dispatch
 - [ ] avoid sub dupes
+- [x] add server component to broker
+- [ ] server conf
 
 # license
 MIT

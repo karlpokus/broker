@@ -103,8 +103,8 @@ func (b *broker) listener() {
 	}
 }
 
-// New starts a listener for the ops chan and returns a broker
-func New() *broker {
+// NewBroker starts a listener for the ops chan and returns a broker
+func NewBroker() *broker {
 	b := &broker{
 		ops: make(chan opFunc),
 	}
