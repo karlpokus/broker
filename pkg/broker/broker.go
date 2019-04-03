@@ -7,8 +7,10 @@ import (
 
 type queue struct {
 	msgs []string
-	subs map[uuid]io.Writer
+	subs subscribers
 }
+
+type subscribers map[uuid]io.Writer
 
 type storage map[string]queue
 
@@ -45,7 +47,7 @@ func (b *broker) pub(m *msg) {
 		if !ok {
 			s[m.queue] = queue{
 				msgs: []string{m.text},
-				subs: make(map[uuid]io.Writer),
+				subs: make(subscribers),
 			}
 			return
 		}
@@ -63,7 +65,7 @@ func (b *broker) sub(m *msg, w io.Writer, id uuid) {
 		q, ok := s[m.queue]
 		if !ok {
 			q = queue{
-				subs: make(map[uuid]io.Writer),
+				subs: make(subscribers),
 			}
 		}
 		q.subs[id] = w
