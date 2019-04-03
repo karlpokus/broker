@@ -2,12 +2,12 @@ package broker
 
 import (
 	"fmt"
-	"net"
+	"io"
 )
 
 type queue struct {
 	msgs []string
-	subs map[net.Addr]net.Conn
+	subs map[uuid]io.Writer
 }
 
 type storage map[string]queue
@@ -23,7 +23,7 @@ type brokerConf struct {
 	debug bool
 }
 
-func (b *broker) Parse(buf []byte, conn net.Conn) error {
+func (b *broker) Parse(buf []byte, w io.Writer, id uuid) error {
 	m, err := parse(buf)
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func (b *broker) Parse(buf []byte, conn net.Conn) error {
 		return nil
 	}
 	if m.op == "sub" {
-		b.sub(m, conn)
+		b.sub(m, w, id)
 		return nil
 	}
 	return nil
@@ -45,7 +45,7 @@ func (b *broker) pub(m *msg) {
 		if !ok {
 			s[m.queue] = queue{
 				msgs: []string{m.text},
-				subs: make(map[net.Addr]net.Conn),
+				subs: make(map[uuid]io.Writer),
 			}
 			return
 		}
@@ -58,15 +58,15 @@ func (b *broker) pub(m *msg) {
 	b.ops <- dispatch(m.queue)
 }
 
-func (b *broker) sub(m *msg, conn net.Conn) {
+func (b *broker) sub(m *msg, w io.Writer, id uuid) {
 	b.ops <- func(s storage) {
 		q, ok := s[m.queue]
 		if !ok {
 			q = queue{
-				subs: make(map[net.Addr]net.Conn),
+				subs: make(map[uuid]io.Writer),
 			}
 		}
-		q.subs[conn.RemoteAddr()] = conn
+		q.subs[id] = w
 		s[m.queue] = q
 	}
 	if b.debug {
@@ -78,19 +78,19 @@ func (b *broker) sub(m *msg, conn net.Conn) {
 func dispatch(q string) opFunc {
 	return func(s storage) {
 		for _, m := range s[q].msgs { // TODO: delete delivered msgs
-			for _, conn := range s[q].subs {
-				fmt.Fprintf(conn, "%s", m)
+			for _, w := range s[q].subs {
+				fmt.Fprintf(w, "%s", m)
 			}
 		}
 	}
 }
 
-func (b *broker) RemoveClient(conn net.Conn) {
+func (b *broker) RemoveClient(id uuid) {
 	b.ops <- func(s storage) {
 		for k, q := range s {
-			_, ok := q.subs[conn.RemoteAddr()]
+			_, ok := q.subs[id]
 			if ok {
-				delete(q.subs, conn.RemoteAddr())
+				delete(q.subs, id)
 				s[k] = q // needed?
 			}
 		}

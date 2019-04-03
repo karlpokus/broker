@@ -33,6 +33,7 @@ $ go test ./pkg/broker/...
 - [x] add server component
 - [x] add brokerConf
 - [ ] server conf
+- [x] replace net.Conn with io.Writer
 
 # license
 MIT

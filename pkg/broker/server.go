@@ -34,6 +34,7 @@ func (srv server) Start() error {
 }
 
 func handler(conn net.Conn) {
+	id, _ := NewId()
 	defer conn.Close()
 
 	for {
@@ -41,18 +42,18 @@ func handler(conn net.Conn) {
 		var buf [128]byte
 		n, err := conn.Read(buf[:])
 		if err, ok := err.(net.Error); ok && err.Timeout() {
-			bkr.RemoveClient(conn)
+			bkr.RemoveClient(id)
 			return
 		}
 		if err == io.EOF {
-			bkr.RemoveClient(conn)
+			bkr.RemoveClient(id)
 			return
 		}
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		err = bkr.Parse(buf[:n], conn)
+		err = bkr.Parse(buf[:n], conn, id)
 		if err != nil {
 			fmt.Fprintf(conn, "%s\n", err.Error())
 			continue
