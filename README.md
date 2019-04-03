@@ -17,7 +17,7 @@ bixa is a kitty
 
 # tests
 ```bash
-$ go test ./pkg/broker/...
+$ go test ./pkg/broker/... -race
 ```
 
 # todos
