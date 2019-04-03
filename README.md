@@ -35,6 +35,7 @@ $ go test ./pkg/broker/... [-race -bench=.]
 - [ ] server conf
 - [x] replace net.Conn with io.Writer
 - [x] add benchmark for `NewId`
+- [ ] try reading [1]byte to check connection before write - requires a io.ReadWriter
 
 # license
 MIT

@@ -79,7 +79,7 @@ func dispatch(q string) opFunc {
 	return func(s storage) {
 		for _, m := range s[q].msgs { // TODO: delete delivered msgs
 			for _, w := range s[q].subs {
-				fmt.Fprintf(w, "%s", m)
+				fmt.Fprintf(w, "%s", m) // TODO: handle returned error
 			}
 		}
 	}
