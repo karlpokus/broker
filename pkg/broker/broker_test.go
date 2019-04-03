@@ -63,3 +63,14 @@ func TestPubSub(t *testing.T) {
 		t.Errorf("got %s, want %s", got, want)
 	}
 }
+
+// avoid compiler optimisations
+var gid uuid
+
+func BenchmarkNewId(b *testing.B) {
+	var id uuid
+	for n := 0; n < b.N; n++ {
+		id, _ = NewId()
+	}
+	gid = id
+}

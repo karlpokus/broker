@@ -17,7 +17,7 @@ bixa is a kitty
 
 # tests
 ```bash
-$ go test ./pkg/broker/... -race
+$ go test ./pkg/broker/... [-race -bench=.]
 ```
 
 # todos
@@ -34,6 +34,7 @@ $ go test ./pkg/broker/... -race
 - [x] add brokerConf
 - [ ] server conf
 - [x] replace net.Conn with io.Writer
+- [x] add benchmark for `NewId`
 
 # license
 MIT
