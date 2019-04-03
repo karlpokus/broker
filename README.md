@@ -30,7 +30,8 @@ $ go test ./pkg/broker/...
 - [ ] handle empty msg text
 - [ ] concurrent dispatch
 - [ ] avoid sub dupes
-- [x] add server component to broker
+- [x] add server component
+- [x] add brokerConf
 - [ ] server conf
 
 # license

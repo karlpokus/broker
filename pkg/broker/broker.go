@@ -15,7 +15,12 @@ type storage map[string]queue
 type opFunc func(storage)
 
 type broker struct {
-	ops chan opFunc
+	ops   chan opFunc
+	debug bool
+}
+
+type brokerConf struct {
+	debug bool
 }
 
 func (b *broker) Parse(buf []byte, conn net.Conn) error {
@@ -47,7 +52,9 @@ func (b *broker) pub(m *msg) {
 		q.msgs = append(q.msgs, m.text)
 		s[m.queue] = q
 	}
-	b.ops <- debug
+	if b.debug {
+		b.ops <- debug
+	}
 	b.ops <- dispatch(m.queue)
 }
 
@@ -62,7 +69,9 @@ func (b *broker) sub(m *msg, conn net.Conn) {
 		q.subs[conn.RemoteAddr()] = conn
 		s[m.queue] = q
 	}
-	b.ops <- debug
+	if b.debug {
+		b.ops <- debug
+	}
 	b.ops <- dispatch(m.queue)
 }
 
@@ -86,7 +95,9 @@ func (b *broker) RemoveClient(conn net.Conn) {
 			}
 		}
 	}
-	b.ops <- debug
+	if b.debug {
+		b.ops <- debug
+	}
 }
 
 func debug(s storage) {
@@ -104,9 +115,10 @@ func (b *broker) listener() {
 }
 
 // NewBroker starts a listener for the ops chan and returns a broker
-func NewBroker() *broker {
+func NewBroker(conf *brokerConf) *broker {
 	b := &broker{
-		ops: make(chan opFunc),
+		ops:   make(chan opFunc),
+		debug: conf.debug,
 	}
 	go b.listener()
 	return b

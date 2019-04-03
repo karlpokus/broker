@@ -9,7 +9,7 @@ import (
 
 var bkr *broker
 
-type server struct {}
+type server struct{}
 
 func NewServer() server {
 	return server{}
@@ -21,7 +21,9 @@ func (srv server) Start() error {
 		return err
 	}
 	fmt.Println("listening..")
-	bkr = NewBroker()
+	bkr = NewBroker(&brokerConf{
+		debug: true,
+	})
 	for {
 		conn, err := l.Accept()
 		if err != nil {
