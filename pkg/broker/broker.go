@@ -56,9 +56,6 @@ func (b *broker) pub(m *msg) {
 		q.msgs = append(q.msgs, m.text)
 		s[m.queue] = q
 	}
-	if b.debug {
-		b.ops <- debug
-	}
 	b.ops <- dispatch(m.queue)
 }
 
@@ -81,9 +78,6 @@ func (b *broker) sub(m *msg, w io.Writer, id uuid) error {
 	}
 	err := <-fail
 	if err == nil {
-		if b.debug {
-			b.ops <- debug
-		}
 		b.ops <- dispatch(m.queue)
 	}
 	return err
@@ -109,9 +103,6 @@ func (b *broker) RemoveClient(id uuid) {
 			}
 		}
 	}
-	if b.debug {
-		b.ops <- debug
-	}
 }
 
 func debug(s storage) {
@@ -125,6 +116,9 @@ func (b *broker) listener() {
 	s := make(storage)
 	for op := range b.ops {
 		op(s)
+		if b.debug {
+			debug(s)
+		}
 	}
 }
 
