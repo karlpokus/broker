@@ -3,7 +3,12 @@ package broker
 import (
 	"fmt"
 	"io"
+	"errors"
 )
+
+var subDupe = errors.New("Subscriber already exist")
+
+type storage map[string]queue
 
 type queue struct {
 	msgs []string
@@ -11,8 +16,6 @@ type queue struct {
 }
 
 type subscribers map[uuid]io.Writer
-
-type storage map[string]queue
 
 type opFunc func(storage)
 
@@ -35,8 +38,7 @@ func (b *broker) Parse(buf []byte, w io.Writer, id uuid) error {
 		return nil
 	}
 	if m.op == "sub" {
-		b.sub(m, w, id)
-		return nil
+		return b.sub(m, w, id)
 	}
 	return nil
 }
@@ -60,7 +62,8 @@ func (b *broker) pub(m *msg) {
 	b.ops <- dispatch(m.queue)
 }
 
-func (b *broker) sub(m *msg, w io.Writer, id uuid) {
+func (b *broker) sub(m *msg, w io.Writer, id uuid) error {
+	fail := make(chan error)
 	b.ops <- func(s storage) {
 		q, ok := s[m.queue]
 		if !ok {
@@ -68,13 +71,22 @@ func (b *broker) sub(m *msg, w io.Writer, id uuid) {
 				subs: make(subscribers),
 			}
 		}
+		if _, ok := s[m.queue].subs[id]; ok {
+			fail <- subDupe
+			return
+		}
 		q.subs[id] = w
 		s[m.queue] = q
+		fail <- nil
 	}
-	if b.debug {
-		b.ops <- debug
+	err := <-fail
+	if err == nil {
+		if b.debug {
+			b.ops <- debug
+		}
+		b.ops <- dispatch(m.queue)
 	}
-	b.ops <- dispatch(m.queue)
+	return err
 }
 
 func dispatch(q string) opFunc {

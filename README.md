@@ -29,7 +29,7 @@ $ go test ./pkg/broker/... [-race -bench=.]
 - [ ] less messy msg protocol
 - [ ] handle empty msg text
 - [ ] concurrent dispatch
-- [ ] avoid sub dupes
+- [x] avoid sub dupes
 - [x] add server component
 - [x] add brokerConf
 - [ ] server conf

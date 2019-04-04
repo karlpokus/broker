@@ -32,10 +32,13 @@ func (mw *mockWriter) Drain() string {
 func TestPubSub(t *testing.T) {
 	bkr := NewBroker(&brokerConf{})
 	w := &mockWriter{}
-	id, _ := NewId()
+	id, err := NewId()
+	if err != nil {
+		t.Errorf("%s", err)
+	}
 	// sub
 	m := []byte("sub;cats;")
-	err := bkr.Parse(m, w, id)
+	err = bkr.Parse(m, w, id)
 	if err != nil {
 		t.Errorf("%s", err)
 	}
@@ -44,6 +47,11 @@ func TestPubSub(t *testing.T) {
 		if !ok {
 			t.Errorf("%s should be present in queue subs", id)
 		}
+	}
+	// subDupe
+	err = bkr.Parse(m, w, id)
+	if err != subDupe {
+		t.Errorf("got %s, want %s", err, subDupe)
 	}
 	// pub
 	m = []byte("pub;cats;bixa")
