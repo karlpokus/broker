@@ -34,13 +34,18 @@ func (srv server) Start() error {
 }
 
 func handler(conn net.Conn) {
-	id, _ := NewId()
 	defer conn.Close()
+	id, err := NewId()
+	if err != nil {
+		fmt.Printf("Unable to create new id %s\n", err) // TODO: better log
+		return
+	}
+	var n int
 
 	for {
 		conn.SetDeadline(time.Now().Add(30 * time.Second))
 		var buf [128]byte
-		n, err := conn.Read(buf[:])
+		n, err = conn.Read(buf[:])
 		if err, ok := err.(net.Error); ok && err.Timeout() {
 			bkr.RemoveClient(id)
 			return
