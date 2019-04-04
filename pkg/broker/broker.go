@@ -1,9 +1,9 @@
 package broker
 
 import (
+	"errors"
 	"fmt"
 	"io"
-	"errors"
 )
 
 var subDupe = errors.New("Subscriber already exist")
@@ -28,6 +28,7 @@ type brokerConf struct {
 	debug bool
 }
 
+// Parse parses the wire msg and runs the op
 func (b *broker) Parse(buf []byte, w io.Writer, id uuid) error {
 	m, err := parse(buf)
 	if err != nil {
@@ -35,14 +36,22 @@ func (b *broker) Parse(buf []byte, w io.Writer, id uuid) error {
 	}
 	if m.op == "pub" {
 		b.pub(m)
+		b.ops <- dispatch(m.queue)
 		return nil
 	}
 	if m.op == "sub" {
-		return b.sub(m, w, id)
+		err = b.sub(m, w, id)
+		if err != nil {
+			return err
+		}
+		b.ops <- dispatch(m.queue)
+		return nil
 	}
 	return nil
 }
 
+// pub publishes a msg on the specified queue
+// it creates the queue if it does not exist
 func (b *broker) pub(m *msg) {
 	b.ops <- func(s storage) {
 		q, ok := s[m.queue]
@@ -56,9 +65,11 @@ func (b *broker) pub(m *msg) {
 		q.msgs = append(q.msgs, m.text)
 		s[m.queue] = q
 	}
-	b.ops <- dispatch(m.queue)
 }
 
+// sub adds a subscriber to the specified queue
+// it also checks for dupes
+// it creates the queue if it does not exist
 func (b *broker) sub(m *msg, w io.Writer, id uuid) error {
 	fail := make(chan error)
 	b.ops <- func(s storage) {
@@ -76,11 +87,7 @@ func (b *broker) sub(m *msg, w io.Writer, id uuid) error {
 		s[m.queue] = q
 		fail <- nil
 	}
-	err := <-fail
-	if err == nil {
-		b.ops <- dispatch(m.queue)
-	}
-	return err
+	return <-fail
 }
 
 func dispatch(q string) opFunc {
