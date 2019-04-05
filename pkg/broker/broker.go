@@ -6,16 +6,7 @@ import (
 	"io"
 )
 
-var subDupe = errors.New("Subscriber already exist")
-
-type storage map[string]queue
-
-type queue struct {
-	msgs []string
-	subs subscribers
-}
-
-type subscribers map[uuid]io.Writer
+var subDupeErr = errors.New("Subscriber already exist")
 
 type opFunc func(storage)
 
@@ -51,44 +42,23 @@ func (b *broker) Parse(buf []byte, w io.Writer, id uuid) error {
 }
 
 // pub publishes a msg on the specified queue
-// it creates the queue if it does not exist
 func (b *broker) pub(m *msg) {
 	b.ops <- func(s storage) {
-		q, ok := s[m.queue]
-		if !ok {
-			s[m.queue] = queue{
-				msgs: []string{m.text},
-				subs: make(subscribers),
-			}
-			return
-		}
-		q.msgs = append(q.msgs, m.text)
-		s[m.queue] = q
+		s.createQueueIfNotExist(m)
+		s.addMsg(m)
 	}
 }
 
 // sub adds a subscriber to the specified queue
-// it also checks for dupes
-// it creates the queue if it does not exist
 func (b *broker) sub(m *msg, w io.Writer, id uuid) error {
 	fail := make(chan error)
 	b.ops <- func(s storage) {
-		q, ok := s[m.queue]
-		if !ok {
-			q = queue{
-				subs: make(subscribers),
-			}
-			q.subs[id] = w
-			s[m.queue] = q
-			fail <- nil
+		s.createQueueIfNotExist(m)
+		if s.isDupe(m, id) {
+			fail <- subDupeErr
 			return
 		}
-		if _, ok := s[m.queue].subs[id]; ok {
-			fail <- subDupe
-			return
-		}
-		q.subs[id] = w
-		s[m.queue] = q
+		s.addSub(m, w, id)
 		fail <- nil
 	}
 	return <-fail

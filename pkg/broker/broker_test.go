@@ -29,8 +29,8 @@ func TestPubSub(t *testing.T) {
 
 	// subDupe
 	err = bkr.Parse(m, w, id)
-	if err != subDupe {
-		t.Errorf("got %s, want %s", err, subDupe)
+	if err != subDupeErr {
+		t.Errorf("got %s, want %s", err, subDupeErr)
 	}
 
 	// pub 1
