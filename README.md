@@ -28,7 +28,7 @@ $ go test ./pkg/broker/... [-race -bench=.]
 - [ ] msg max len
 - [ ] less messy msg protocol
 - [ ] handle empty msg text
-- [ ] concurrent dispatch
+- [x] concurrent delivery to subscriber
 - [x] avoid sub dupes
 - [x] add server component
 - [x] add brokerConf

@@ -78,6 +78,10 @@ func (b *broker) sub(m *msg, w io.Writer, id uuid) error {
 			q = queue{
 				subs: make(subscribers),
 			}
+			q.subs[id] = w
+			s[m.queue] = q
+			fail <- nil
+			return
 		}
 		if _, ok := s[m.queue].subs[id]; ok {
 			fail <- subDupe
@@ -92,10 +96,21 @@ func (b *broker) sub(m *msg, w io.Writer, id uuid) error {
 
 func dispatch(q string) opFunc {
 	return func(s storage) {
-		for _, m := range s[q].msgs { // TODO: delete delivered msgs
-			for _, w := range s[q].subs {
-				fmt.Fprintf(w, "%s", m) // TODO: handle returned error
-			}
+		if len(s[q].msgs) == 0 {
+			return
+		}
+		go deliver(s[q])
+		s[q] = queue{
+			msgs: []string{},
+			subs: s[q].subs,
+		}
+	}
+}
+
+func deliver(q queue) {
+	for _, m := range q.msgs {
+		for _, w := range q.subs {
+			fmt.Fprintf(w, "%s", m) // TODO: handle returned error
 		}
 	}
 }

@@ -71,14 +71,14 @@ func TestPubSub(t *testing.T) {
 	if err != nil {
 		t.Errorf("%s", err)
 	}
-	want := "bixa"
 	bkr.ops <- func(s storage) {
-		got := s["cats"].msgs[0]
-		if got != want {
-			t.Errorf("got %s, want %s", got, want)
+		msgs := len(s["cats"].msgs)
+		if msgs != 0 {
+			t.Errorf("got %d, want %d", msgs, 0)
 		}
 	}
 	w.Wait()
+	want := "bixa"
 	got := w.Drain()
 	if got != want {
 		t.Errorf("got %s, want %s", got, want)
