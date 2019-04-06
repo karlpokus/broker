@@ -60,7 +60,7 @@ func handler(conn net.Conn) {
 		}
 		err = bkr.Parse(buf[:n], conn, id)
 		if err != nil {
-			fmt.Fprintf(conn, "%s\n", err.Error())
+			fmt.Fprintf(conn, "%s\n", err)
 			continue
 		}
 		fmt.Fprintln(conn, "ok")
