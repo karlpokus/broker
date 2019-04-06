@@ -27,7 +27,7 @@ func (b *broker) Parse(buf []byte, w io.Writer, id uuid) error {
 	}
 	if m.op == "pub" {
 		b.pub(m)
-		b.ops <- dispatch(m.queue)
+		b.dispatch(m)
 		return nil
 	}
 	if m.op == "sub" {
@@ -35,7 +35,7 @@ func (b *broker) Parse(buf []byte, w io.Writer, id uuid) error {
 		if err != nil {
 			return err
 		}
-		b.ops <- dispatch(m.queue)
+		b.dispatch(m)
 		return nil
 	}
 	return nil
@@ -64,16 +64,13 @@ func (b *broker) sub(m *msg, w io.Writer, id uuid) error {
 	return <-fail
 }
 
-func dispatch(q string) opFunc {
-	return func(s storage) {
-		if len(s[q].msgs) == 0 {
+func (b *broker) dispatch(m *msg) {
+	b.ops <- func(s storage) {
+		if len(s[m.queue].msgs) == 0 {
 			return
 		}
-		go deliver(s[q])
-		s[q] = queue{
-			msgs: []string{},
-			subs: s[q].subs,
-		}
+		go deliver(s[m.queue])
+		s.clearMsgs(m)		
 	}
 }
 

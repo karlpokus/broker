@@ -34,3 +34,10 @@ func (s storage) isDupe(m *msg, id uuid) bool {
 	_, ok := s[m.queue].subs[id]
 	return ok
 }
+
+func (s storage) clearMsgs(m *msg) {
+	s[m.queue] = queue{
+		msgs: []string{},
+		subs: s[m.queue].subs,
+	}
+}
