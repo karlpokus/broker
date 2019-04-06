@@ -3,7 +3,7 @@ package broker
 import (
 	"testing"
 
-	"github.com/karlpokus/broker/pkg/bufw"
+	"github.com/karlpokus/bufw"
 )
 
 func TestPubSub(t *testing.T) {
@@ -42,7 +42,7 @@ func TestPubSub(t *testing.T) {
 	bkr.ops <- msgsN(t)
 	w.Wait()
 	want := "bixa"
-	got := w.Drain()
+	got := w.String()
 	if got != want {
 		t.Errorf("got %s, want %s", got, want)
 	}
@@ -56,7 +56,7 @@ func TestPubSub(t *testing.T) {
 	bkr.ops <- msgsN(t)
 	w.Wait()
 	want = "rex"
-	got = w.Drain()
+	got = w.String()
 	if got != want {
 		t.Errorf("got %s, want %s", got, want)
 	}
