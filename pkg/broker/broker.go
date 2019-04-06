@@ -70,7 +70,7 @@ func (b *broker) dispatch(m *msg) {
 			return
 		}
 		go deliver(s[m.queue])
-		s.clearMsgs(m)		
+		s.clearMsgs(m)
 	}
 }
 

@@ -10,9 +10,9 @@ var testTable = []struct {
 	{[]byte("no-semi-colons"), msg{}, InvalidMsg},
 	{[]byte("foo;doo;"), msg{}, InvalidOp},
 	{[]byte("pub;;"), msg{}, InvalidQueue},
+	{[]byte("pub;cats;"), msg{}, InvalidTextLength},
 	{[]byte("ack;;"), msg{"ack", "", ""}, nil},
 	{[]byte("pub;cats;bixa the kitty"), msg{"pub", "cats", "bixa the kitty"}, nil},
-	{[]byte("pub;cats;"), msg{"pub", "cats", ""}, nil},
 	{[]byte("sub;cats;"), msg{"sub", "cats", ""}, nil},
 }
 
