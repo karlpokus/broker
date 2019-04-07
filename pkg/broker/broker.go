@@ -3,7 +3,6 @@ package broker
 import (
 	"errors"
 	"fmt"
-	"io"
 )
 
 var subDupeErr = errors.New("Subscriber already exist")
@@ -19,26 +18,38 @@ type brokerConf struct {
 	debug bool
 }
 
-// Parse parses the wire msg and runs the op
-func (b *broker) Parse(buf []byte, w io.Writer, id uuid) error {
+// Parse parses the wire msg, saves the subscribed to queue name on the client and runs the op
+func (b *broker) Parse(buf []byte, cnt *client) error {
 	m, err := parse(buf)
 	if err != nil {
 		return err
 	}
+	if m.op == "sub" { // TODO: method on cnt
+		cnt.subs = append(cnt.subs, m.queue)
+	}
+	err = b.runOp(m, cnt)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// runOp runs the op specified in the msg
+func (b *broker) runOp(m *msg, cnt *client) error {
 	if m.op == "pub" {
 		b.pub(m)
 		b.dispatch(m)
 		return nil
 	}
 	if m.op == "sub" {
-		err = b.sub(m, w, id)
+		err := b.sub(m, cnt)
 		if err != nil {
 			return err
 		}
 		b.dispatch(m)
 		return nil
 	}
-	return nil
+	return nil // temp: ack
 }
 
 // pub publishes a msg on the specified queue
@@ -50,15 +61,15 @@ func (b *broker) pub(m *msg) {
 }
 
 // sub adds a subscriber to the specified queue
-func (b *broker) sub(m *msg, w io.Writer, id uuid) error {
+func (b *broker) sub(m *msg, cnt *client) error {
 	fail := make(chan error)
 	b.ops <- func(s storage) {
 		s.createQueueIfNotExist(m)
-		if s.isDupe(m, id) {
+		if s.isDupe(m, cnt) {
 			fail <- subDupeErr
 			return
 		}
-		s.addSub(m, w, id)
+		s.addSub(m, cnt)
 		fail <- nil
 	}
 	return <-fail
@@ -69,26 +80,28 @@ func (b *broker) dispatch(m *msg) {
 		if len(s[m.queue].msgs) == 0 {
 			return
 		}
-		go deliver(s[m.queue])
+		go deliver(s.copyQueue(m))
 		s.clearMsgs(m)
 	}
 }
 
-func deliver(q queue) {
+func deliver(q *queue) {
 	for _, m := range q.msgs {
 		for _, w := range q.subs {
-			fmt.Fprintf(w, "%s", m) // TODO: handle returned error
+			fmt.Fprintf(w, "%s", m)
 		}
 	}
 }
 
-func (b *broker) RemoveClient(id uuid) {
+func (b *broker) removeSubs(cnt *client) {
+	if len(cnt.subs) == 0 {
+		return
+	}
 	b.ops <- func(s storage) {
-		for k, q := range s {
-			_, ok := q.subs[id]
+		for _, q := range cnt.subs { // TODO: method on storage
+			_, ok := s[q].subs[cnt.id]
 			if ok {
-				delete(q.subs, id)
-				s[k] = q // needed?
+				delete(s[q].subs, cnt.id)
 			}
 		}
 	}
