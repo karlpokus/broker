@@ -18,11 +18,14 @@ type brokerConf struct {
 	debug bool
 }
 
-// Parse parses the wire msg, saves the subscribed to queue name on the client and runs the op
+// Parse parses the wire msg, saves any subscriptions on the client and runs the op
 func (b *broker) Parse(buf []byte, cnt *client) error {
 	m, err := parse(buf)
 	if err != nil {
 		return err
+	}
+	if m.op == "ping" {
+		return nil
 	}
 	if m.op == "sub" { // TODO: method on cnt
 		cnt.subs = append(cnt.subs, m.queue)
@@ -49,7 +52,7 @@ func (b *broker) runOp(m *msg, cnt *client) error {
 		b.dispatch(m)
 		return nil
 	}
-	return nil // temp: ack
+	return nil
 }
 
 // pub publishes a msg on the specified queue

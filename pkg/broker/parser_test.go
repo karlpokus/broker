@@ -7,11 +7,11 @@ var testTable = []struct {
 	m   msg
 	err error
 }{
-	{[]byte("no-semi-colons"), msg{}, InvalidMsg},
+	{[]byte("gibberish"), msg{}, InvalidMsg},
 	{[]byte("foo;doo;"), msg{}, InvalidOp},
 	{[]byte("pub;;"), msg{}, InvalidQueue},
 	{[]byte("pub;cats;"), msg{}, InvalidTextLength},
-	{[]byte("ack;;"), msg{"ack", "", ""}, nil},
+	{[]byte("ping"), msg{"ping", "", ""}, nil},
 	{[]byte("pub;cats;bixa the kitty"), msg{"pub", "cats", "bixa the kitty"}, nil},
 	{[]byte("sub;cats;"), msg{"sub", "cats", ""}, nil},
 }

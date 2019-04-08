@@ -2,7 +2,7 @@
 A message broker in go. A toy project. Most fun part is using closures instead of mutexes for a shared data src without any race conditions.
 
 # usage
-The message protocol is `<op>;[<queue>];[<text>]`
+The message protocol is `ping|<op>;<queue>;[<text>]`
 ```bash
 # run server
 $ go run main.go
@@ -13,6 +13,8 @@ ok
 sub;cats;
 ok
 bixa is a kitty
+ping # extends the timeout
+ok
 ```
 
 # tests
@@ -36,6 +38,7 @@ $ go test ./pkg/broker/... [-race -bench=. -cover]
 - [x] add benchmark for `NewId`
 - [ ] try reading [1]byte to check connection before write - requires a io.ReadWriter
 - [x] store refs to subscribed queues to make the blocking op to remove subscriber faster
+- [x] add ping
 
 # license
 MIT

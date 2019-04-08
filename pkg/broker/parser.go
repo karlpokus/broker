@@ -16,17 +16,17 @@ type msg struct {
 	op, queue, text string
 }
 
-// parse parses the wire msg. Expecting the format op;queue;text
+// parse parses the wire msg. Expecting the format ping or op;queue;[text]
 func parse(b []byte) (*msg, error) {
 	m := &msg{}
-	s := string(b)
+	s := strings.TrimSpace(string(b))
+	if s == "ping" {
+		m.op = "ping"
+		return m, nil
+	}
 	n := strings.Count(s, ";")
 	if n != 2 {
 		return m, InvalidMsg
-	}
-	if s == "ack;;" {
-		m.op = "ack"
-		return m, nil
 	}
 	p := strings.Split(s, ";")
 	if p[0] != "pub" && p[0] != "sub" {
