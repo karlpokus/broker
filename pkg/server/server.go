@@ -1,17 +1,19 @@
-package broker
+package server
 
 import (
 	"fmt"
 	"io"
 	"net"
 	"time"
+
+	"github.com/karlpokus/broker/pkg/broker"
 )
 
-var bkr *broker
+var bkr *broker.Broker
 
 type server struct{}
 
-func NewServer() server {
+func New() server {
 	return server{}
 }
 
@@ -21,13 +23,14 @@ func (srv server) Start() error {
 		return err
 	}
 	fmt.Println("listening..")
-	bkr = NewBroker(&brokerConf{
-		debug: true,
+	bkr = broker.NewBroker(&broker.Conf{
+		Debug: true,
 	})
 	for {
 		conn, err := l.Accept()
 		if err != nil {
 			fmt.Printf("connection error: %s\n", err)
+			continue
 		}
 		go handler(conn)
 	}
@@ -35,7 +38,7 @@ func (srv server) Start() error {
 
 func handler(conn net.Conn) {
 	defer conn.Close()
-	cnt, err := newClient(conn)
+	cnt, err := broker.NewClient(conn)
 	if err != nil {
 		fmt.Printf("Unable to create new client %s\n", err)
 		return
@@ -46,11 +49,11 @@ func handler(conn net.Conn) {
 		var buf [128]byte
 		n, err := conn.Read(buf[:])
 		if err, ok := err.(net.Error); ok && err.Timeout() { // TODO: create wrapper
-			bkr.removeSubs(cnt)
+			bkr.RemoveSubs(cnt)
 			return
 		}
 		if err == io.EOF {
-			bkr.removeSubs(cnt)
+			bkr.RemoveSubs(cnt)
 			return
 		}
 		if err != nil {

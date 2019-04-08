@@ -39,6 +39,8 @@ $ go test ./pkg/broker/... [-race -bench=. -cover]
 - [ ] try reading [1]byte to check connection before write - requires a io.ReadWriter
 - [x] store refs to subscribed queues to make the blocking op to remove subscriber faster
 - [x] add ping
+- [x] detach server component from broker
+- [ ] new broker interface: a client, io.Reader and io.Writer
 
 # license
 MIT

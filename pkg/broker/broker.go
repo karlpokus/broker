@@ -9,17 +9,17 @@ var subDupeErr = errors.New("Subscriber already exist")
 
 type opFunc func(storage)
 
-type broker struct {
+type Broker struct {
 	ops   chan opFunc
-	debug bool
+	Debug bool
 }
 
-type brokerConf struct {
-	debug bool
+type Conf struct {
+	Debug bool
 }
 
 // Parse parses the wire msg, saves any subscriptions on the client and runs the op
-func (b *broker) Parse(buf []byte, cnt *client) error {
+func (b *Broker) Parse(buf []byte, cnt *client) error {
 	m, err := parse(buf)
 	if err != nil {
 		return err
@@ -38,10 +38,13 @@ func (b *broker) Parse(buf []byte, cnt *client) error {
 }
 
 // runOp runs the op specified in the msg
-func (b *broker) runOp(m *msg, cnt *client) error {
+func (b *Broker) runOp(m *msg, cnt *client) error {
 	if m.op == "pub" {
 		b.pub(m)
 		b.dispatch(m)
+		if b.Debug {
+			b.storeDump()
+		}
 		return nil
 	}
 	if m.op == "sub" {
@@ -50,13 +53,16 @@ func (b *broker) runOp(m *msg, cnt *client) error {
 			return err
 		}
 		b.dispatch(m)
+		if b.Debug {
+			b.storeDump()
+		}
 		return nil
 	}
 	return nil
 }
 
 // pub publishes a msg on the specified queue
-func (b *broker) pub(m *msg) {
+func (b *Broker) pub(m *msg) {
 	b.ops <- func(s storage) {
 		s.createQueueIfNotExist(m)
 		s.addMsg(m)
@@ -64,7 +70,7 @@ func (b *broker) pub(m *msg) {
 }
 
 // sub adds a subscriber to the specified queue
-func (b *broker) sub(m *msg, cnt *client) error {
+func (b *Broker) sub(m *msg, cnt *client) error {
 	fail := make(chan error)
 	b.ops <- func(s storage) {
 		s.createQueueIfNotExist(m)
@@ -78,9 +84,9 @@ func (b *broker) sub(m *msg, cnt *client) error {
 	return <-fail
 }
 
-func (b *broker) dispatch(m *msg) {
+func (b *Broker) dispatch(m *msg) {
 	b.ops <- func(s storage) {
-		if len(s[m.queue].msgs) == 0 {
+		if len(s[m.queue].msgs) == 0 || len(s[m.queue].subs) == 0 {
 			return
 		}
 		go deliver(s.copyQueue(m))
@@ -91,12 +97,12 @@ func (b *broker) dispatch(m *msg) {
 func deliver(q *queue) {
 	for _, m := range q.msgs {
 		for _, w := range q.subs {
-			fmt.Fprintf(w, "%s", m)
+			fmt.Fprintf(w, "%s\n", m)
 		}
 	}
 }
 
-func (b *broker) removeSubs(cnt *client) {
+func (b *Broker) RemoveSubs(cnt *client) {
 	if len(cnt.subs) == 0 {
 		return
 	}
@@ -108,30 +114,34 @@ func (b *broker) removeSubs(cnt *client) {
 			}
 		}
 	}
+	if b.Debug {
+		b.storeDump()
+	}
 }
 
-func debug(s storage) {
-	for k, v := range s {
-		fmt.Printf("%s: %d msgs, %d subs\n", k, len(v.msgs), len(v.subs))
+func (b *Broker) storeDump() {
+	b.ops <- func(s storage) {
+		fmt.Printf("storeDump ")
+		for k, v := range s {
+			fmt.Printf("%s:%d:%d ", k, len(v.msgs), len(v.subs))
+		}
+		fmt.Println()
 	}
 }
 
 // listener runs opFuncs on the ops chan
-func (b *broker) listener() {
+func (b *Broker) listener() {
 	s := make(storage)
 	for op := range b.ops {
 		op(s)
-		if b.debug {
-			debug(s)
-		}
 	}
 }
 
-// NewBroker starts a listener for the ops chan and returns a broker
-func NewBroker(conf *brokerConf) *broker {
-	b := &broker{
+// NewBroker starts a listener for the ops chan and returns a Broker
+func NewBroker(conf *Conf) *Broker {
+	b := &Broker{
 		ops:   make(chan opFunc),
-		debug: conf.debug,
+		Debug: conf.Debug,
 	}
 	go b.listener()
 	return b

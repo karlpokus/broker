@@ -1,9 +1,9 @@
 package main
 
-import "github.com/karlpokus/broker/pkg/broker"
+import "github.com/karlpokus/broker/pkg/server"
 
 func main() {
-	err := broker.NewServer().Start()
+	err := server.New().Start()
 	if err != nil {
 		panic(err)
 	}

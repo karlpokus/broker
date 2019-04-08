@@ -21,7 +21,7 @@ func newId() (string, error) {
 	return fmt.Sprintf("%x", b[:n]), nil
 }
 
-func newClient(w io.Writer) (*client, error) {
+func NewClient(w io.Writer) (*client, error) {
 	var c client
 	id, err := newId()
 	if err != nil {

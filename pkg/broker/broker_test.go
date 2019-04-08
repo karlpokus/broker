@@ -22,9 +22,9 @@ import (
 // 5. remove subscription
 //  expect client id to be missing from queue subs
 func TestPubSub(t *testing.T) {
-	bkr := NewBroker(&brokerConf{})
+	bkr := NewBroker(&Conf{})
 	w := bufw.New(true)
-	cnt, err := newClient(w)
+	cnt, err := NewClient(w)
 	if err != nil {
 		t.Errorf("%s", err)
 	}
@@ -80,7 +80,7 @@ func TestPubSub(t *testing.T) {
 	}
 
 	// remove subscription
-	bkr.removeSubs(cnt)
+	bkr.RemoveSubs(cnt)
 	bkr.ops <- func(s storage) {
 		_, ok := s["cats"].subs[cnt.id]
 		if ok {
