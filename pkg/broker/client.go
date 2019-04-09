@@ -8,8 +8,9 @@ import (
 
 type client struct {
 	id   string
-	w    io.Writer
 	subs []string
+	w    io.Writer
+	r    io.Reader
 }
 
 func newId() (string, error) {
@@ -21,13 +22,14 @@ func newId() (string, error) {
 	return fmt.Sprintf("%x", b[:n]), nil
 }
 
-func NewClient(w io.Writer) (*client, error) {
+func NewClient(r io.Reader, w io.Writer) (*client, error) {
 	var c client
 	id, err := newId()
 	if err != nil {
 		return &c, err
 	}
 	c.id = id
+	c.r = r
 	c.w = w
 	return &c, nil
 }

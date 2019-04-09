@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"io"
 	"net"
 	"time"
 
@@ -38,30 +37,20 @@ func (srv server) Start() error {
 
 func handler(conn net.Conn) {
 	defer conn.Close()
-	cnt, err := broker.NewClient(conn)
+	cnt, err := broker.NewClient(conn, conn)
 	if err != nil {
 		fmt.Printf("Unable to create new client %s\n", err)
 		return
 	}
+	var fatal bool
 
 	for {
-		conn.SetDeadline(time.Now().Add(30 * time.Second))
-		var buf [128]byte
-		n, err := conn.Read(buf[:])
-		if err, ok := err.(net.Error); ok && err.Timeout() { // TODO: create wrapper
-			bkr.RemoveSubs(cnt)
+		conn.SetDeadline(time.Now().Add(30 * time.Second)) // TODO: ttl in server conf
+		err, fatal = bkr.Handle(cnt)
+		if fatal {
 			return
 		}
-		if err == io.EOF {
-			bkr.RemoveSubs(cnt)
-			return
-		}
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		err = bkr.Parse(buf[:n], cnt)
-		if err != nil {
+		if err != nil { // if !fatal then err is safe to return to caller
 			fmt.Fprintf(conn, "%s\n", err)
 			continue
 		}

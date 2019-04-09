@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/karlpokus/bufw"
@@ -24,40 +25,39 @@ import (
 func TestPubSub(t *testing.T) {
 	bkr := NewBroker(&Conf{})
 	w := bufw.New(true)
-	cnt, err := NewClient(w)
+	cnt, err := NewClient(nil, w) // create reader later
 	if err != nil {
 		t.Errorf("%s", err)
 	}
 
 	// sub
-	buf := []byte("sub;cats;")
-	err = bkr.Parse(buf, cnt)
-	if err != nil {
+	cnt.r = strings.NewReader("sub;cats;")
+	err, fatal := bkr.Handle(cnt)
+	if err != nil || fatal {
 		t.Errorf("%s", err)
 	}
-	bkr.ops <- func(s storage) {
-		_, ok := s["cats"].subs[cnt.id]
-		if !ok {
-			t.Errorf("%s should be present in queue subs", cnt.id)
-		}
-	}
+	bkr.ops <- subscribed(true, "cats", cnt, t)
 	if !sliceContains(cnt.subs, "cats") {
 		t.Errorf("%v should contain queue name", cnt.subs)
 	}
 
 	// subDupe
-	err = bkr.Parse(buf, cnt)
+	cnt.r = strings.NewReader("sub;cats;")
+	err, fatal = bkr.Handle(cnt)
+	if fatal {
+		t.Errorf("subDupe should not be fatal")
+	}
 	if err != subDupeErr {
 		t.Errorf("got %s, want %s", err, subDupeErr)
 	}
 
 	// pub 1
-	buf = []byte("pub;cats;bixa")
-	err = bkr.Parse(buf, cnt)
-	if err != nil {
+	cnt.r = strings.NewReader("pub;cats;bixa")
+	err, fatal = bkr.Handle(cnt)
+	if err != nil || fatal {
 		t.Errorf("%s", err)
 	}
-	bkr.ops <- msgsN(t)
+	bkr.ops <- msgsN(0, t)
 	w.Wait()
 	want := "bixa"
 	got := w.String()
@@ -66,12 +66,12 @@ func TestPubSub(t *testing.T) {
 	}
 
 	// pub 2
-	buf = []byte("pub;cats;rex")
-	err = bkr.Parse(buf, cnt)
-	if err != nil {
+	cnt.r = strings.NewReader("pub;cats;rex")
+	err, fatal = bkr.Handle(cnt)
+	if err != nil || fatal {
 		t.Errorf("%s", err)
 	}
-	bkr.ops <- msgsN(t)
+	bkr.ops <- msgsN(0, t)
 	w.Wait()
 	want = "rex"
 	got = w.String()
@@ -80,19 +80,27 @@ func TestPubSub(t *testing.T) {
 	}
 
 	// remove subscription
-	bkr.RemoveSubs(cnt)
-	bkr.ops <- func(s storage) {
-		_, ok := s["cats"].subs[cnt.id]
-		if ok {
-			t.Errorf("%s should not be present in queue subs", cnt.id)
+	cnt.r = strings.NewReader("")
+	err, fatal = bkr.Handle(cnt)
+	if !fatal {
+		t.Errorf("%s should be fatal", err)
+	}
+	bkr.ops <- subscribed(false, "cats", cnt, t)
+}
+
+func subscribed(b bool, q string, cnt *client, t *testing.T) opFunc {
+	return func(s storage) {
+		_, ok := s[q].subs[cnt.id]
+		if ok != b {
+			t.Errorf("%s in %s should be %t", cnt.id, q, b)
 		}
 	}
 }
 
-func msgsN(t *testing.T) opFunc {
+func msgsN(n int, t *testing.T) opFunc {
 	return func(s storage) {
 		msgs := len(s["cats"].msgs)
-		if msgs != 0 {
+		if msgs != n {
 			t.Errorf("got %d, want %d", msgs, 0)
 		}
 	}

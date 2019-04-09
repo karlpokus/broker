@@ -1,5 +1,10 @@
 # broker
-A message broker in go. A toy project. Most fun part is using closures instead of mutexes for a shared data src without any race conditions.
+A message broker in go. A toy project.
+
+# fun parts
+- using closures instead of mutexes
+- trying to make the broker interface as simple as a client just providing an io.Reader and an io.Writer (not there just yet) which means you can add the broker atop any valid implementation - not just a tcp server like in this repo.
+- figuring out if the store can be a interface
 
 # usage
 The message protocol is `ping|<op>;<queue>;[<text>]`
@@ -40,7 +45,7 @@ $ go test ./pkg/broker/... [-race -bench=. -cover]
 - [x] store refs to subscribed queues to make the blocking op to remove subscriber faster
 - [x] add ping
 - [x] detach server component from broker
-- [ ] new broker interface: a client, io.Reader and io.Writer
+- [x] change broker interface to a client with an io.Reader and an io.Writer
 
 # license
 MIT

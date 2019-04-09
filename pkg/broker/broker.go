@@ -3,6 +3,8 @@ package broker
 import (
 	"errors"
 	"fmt"
+	"io"
+	"net"
 )
 
 var subDupeErr = errors.New("Subscriber already exist")
@@ -18,27 +20,44 @@ type Conf struct {
 	Debug bool
 }
 
-// Parse parses the wire msg, saves any subscriptions on the client and runs the op
-func (b *Broker) Parse(buf []byte, cnt *client) error {
-	m, err := parse(buf)
-	if err != nil {
-		return err
+// Handle reads from the client reader, parses the msg and runs the op specified
+func (b *Broker) Handle(cnt *client) (err error, fatal bool) {
+	var (
+		buf [128]byte
+		n   int
+		m   *msg
+	)
+	n, err = cnt.r.Read(buf[:])
+	if timeoutErr, ok := err.(net.Error); ok && timeoutErr.Timeout() {
+		b.removeSubs(cnt)
+		fatal = true
+		return
 	}
+	if err == io.EOF {
+		b.removeSubs(cnt)
+		fatal = true
+		return
+	}
+	if err != nil {
+		fatal = true
+		return
+	}
+	m, err = parse(buf[:n])
+	if err != nil {
+		return
+	}
+	err = b.runOp(m, cnt)
+	return
+}
+
+// runOp runs the op and saves any subscriptions on the client
+func (b *Broker) runOp(m *msg, cnt *client) error {
 	if m.op == "ping" {
 		return nil
 	}
-	if m.op == "sub" { // TODO: method on cnt
-		cnt.subs = append(cnt.subs, m.queue)
+	if m.op == "sub" {
+		cnt.subs = append(cnt.subs, m.queue) // TODO: method on cnt
 	}
-	err = b.runOp(m, cnt)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// runOp runs the op specified in the msg
-func (b *Broker) runOp(m *msg, cnt *client) error {
 	if m.op == "pub" {
 		b.pub(m)
 		b.dispatch(m)
@@ -102,7 +121,7 @@ func deliver(q *queue) {
 	}
 }
 
-func (b *Broker) RemoveSubs(cnt *client) {
+func (b *Broker) removeSubs(cnt *client) {
 	if len(cnt.subs) == 0 {
 		return
 	}
