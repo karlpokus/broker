@@ -125,12 +125,7 @@ func (b *Broker) removeSubs(cnt *client) {
 		return
 	}
 	b.ops <- func(s storage) {
-		for _, q := range cnt.subs { // TODO: method on storage
-			_, ok := s[q].subs[cnt.id]
-			if ok {
-				delete(s[q].subs, cnt.id)
-			}
-		}
+		s.removeSubs(cnt)
 	}
 	if b.Debug {
 		b.storeDump()

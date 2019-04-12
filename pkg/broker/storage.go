@@ -52,3 +52,12 @@ func (s storage) copyQueue(m *msg) *queue {
 		subs: subs,
 	}
 }
+
+func (s storage) removeSubs(cnt *client) {
+	for _, q := range cnt.subs {
+		_, ok := s[q].subs[cnt.id]
+		if ok {
+			delete(s[q].subs, cnt.id)
+		}
+	}
+}
