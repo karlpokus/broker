@@ -45,7 +45,7 @@ func handler(conn net.Conn) {
 	var fatal bool
 
 	for {
-		conn.SetDeadline(time.Now().Add(30 * time.Second)) // TODO: ttl in server conf
+		conn.SetDeadline(time.Now().Add(60 * time.Second))
 		err, fatal = bkr.Handle(cnt)
 		if fatal {
 			return
