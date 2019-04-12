@@ -13,6 +13,12 @@ type client struct {
 	r    io.Reader
 }
 
+func (cnt *client) saveSub(m *msg) {
+	if m.op == "sub" {
+		cnt.subs = append(cnt.subs, m.queue)
+	}
+}
+
 func newId() (string, error) {
 	var b [16]byte
 	n, err := rand.Read(b[:])

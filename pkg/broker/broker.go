@@ -20,7 +20,8 @@ type Conf struct {
 	Debug bool
 }
 
-// Handle reads from the client reader, parses the msg and runs the op specified
+// Handle reads from the client reader, parses the msg, saves any subscriptions on the client
+// and runs the op specified
 func (b *Broker) Handle(cnt *client) (err error, fatal bool) {
 	var (
 		buf [128]byte
@@ -46,17 +47,15 @@ func (b *Broker) Handle(cnt *client) (err error, fatal bool) {
 	if err != nil {
 		return
 	}
+	cnt.saveSub(m)
 	err = b.runOp(m, cnt)
 	return
 }
 
-// runOp runs the op and saves any subscriptions on the client
+// runOp runs the op specified in the msg
 func (b *Broker) runOp(m *msg, cnt *client) error {
 	if m.op == "ping" {
 		return nil
-	}
-	if m.op == "sub" {
-		cnt.subs = append(cnt.subs, m.queue) // TODO: method on cnt
 	}
 	if m.op == "pub" {
 		b.pub(m)
